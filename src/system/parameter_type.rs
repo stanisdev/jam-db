@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use super::validators::LengthValidator;
+
 pub struct ParameterType<'a> {
     name: &'a str,
 }
@@ -22,10 +25,27 @@ impl ParameterType<'_> {
     }
 
     pub fn length(&self, value: &str) {
+        let mut parsed_value: HashMap<&str, &str> = HashMap::new();
 
+        if value.contains(' ') {
+            for token in value.split_whitespace().into_iter() {
+                let elements: Vec<&str> = token.split('=').collect();
+                parsed_value.insert(elements[0], elements[1]);
+            }
+        } else {
+            let elements = value
+                .split('=')
+                .collect::<Vec<&str>>();
+            parsed_value.insert(elements[0], elements[1]);
+        }
+        let mut validator = LengthValidator::new(self.name, parsed_value);
+        match validator.verify() {
+            Err(message) => println!("{}", message),
+            Ok(_) => (),
+        };
     }
 
     pub fn interval(&self, value: &str) {
-
+        
     }
 }

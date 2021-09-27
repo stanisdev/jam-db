@@ -130,20 +130,18 @@ impl Area<'_> {
                     let parameter_name = &parameters[0..index];
                     parameters = &parameters[index + 1..];
 
-                    let (parameter_value, shift) = if parameters.contains(' ') {
-                        if &parameters[0..1] == "(" { // If parameter value includes multiple properties
-                            
-                            if let Some(index) = parameters.find(')') {
-                                (&parameters[1..index], index + 1)
-                            } else {
-                                panic!("Boom");
-                            }         
-
-                        } else { // Otherwise, we get a plain string
-                            let index = parameters.find(' ').unwrap();
-                            (&parameters[0..index], index)
+                    let (parameter_value, shift) = if &parameters[0..1] == "(" {
+                        if let Some(index) = parameters.find(')') {
+                            (&parameters[1..index], index + 1)
+                        } else {
+                            panic!("Parameter does not contain closing bracket");
                         }
-                    } else {
+                    }
+                    else if parameters.contains(' ') {
+                        let index = parameters.find(' ').unwrap();
+                        (&parameters[0..index], index)
+                    }
+                    else {
                         (parameters, 0) // If we've reached the end of a string
                     };
                     parameters = &parameters[shift..].trim_start();
@@ -152,7 +150,6 @@ impl Area<'_> {
                     break;
                 }
             };
-
             if !parsed_parameters.contains_key("type") {
                 panic!("Boom");
             }
@@ -165,13 +162,13 @@ impl Area<'_> {
             }
             for (name, value) in parsed_parameters {
                 match name {
-                    "auto_increment" => {
-                        parameter_type.auto_increment(value);
-                    },
-                    _ => (), // @todo: uncomment -> panic!("Boom"),
+                    "auto_increment" => parameter_type.auto_increment(value),
+                    "default" => parameter_type.default(value),
+                    "length" => parameter_type.length(value),
+                    "interval" => parameter_type.interval(value),
+                    _ => panic!("Boom"),
                 };
             }
-            break;
         }
     }
 
