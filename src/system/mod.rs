@@ -3,3 +3,5 @@ pub mod area;
 pub mod record;
 pub mod parameter_type;
 pub mod validators;
+pub mod config;
+pub mod source;

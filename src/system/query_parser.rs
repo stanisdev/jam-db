@@ -1,19 +1,19 @@
-use std::collections::HashMap;
 use super::area::Area;
 use super::record::Record;
+use super::source::Source;
 
-pub struct QueryParser<'a> {
-    parameters: HashMap<&'a str, String>,
-}
+pub struct QueryParser {}
 
-impl QueryParser<'_> {
+impl QueryParser {
     pub fn new() -> Self {
-        QueryParser {
-            parameters: HashMap::new(),
-        }
+        QueryParser {}
     }
 
     pub fn parse(&mut self, initial_query: &str) {
+        let mut config_contents = String::new();
+        let mut source = Source::new(&mut config_contents);
+
+        // Cut excess whitespace symbols
         let mut query = String::new();
         for token in initial_query.split_whitespace().into_iter() {
             query.push_str(token);
@@ -25,7 +25,7 @@ impl QueryParser<'_> {
         // Get command
         if let Some(index) = query.find(' ') {
             let command = &query[0..index].to_lowercase();
-            self.parameters.insert("command", command.to_string());
+            source.query.parameters.insert("command", command.to_string());
             index_counter = index + 1;
         } else {
             panic!("Boom!");
@@ -34,21 +34,20 @@ impl QueryParser<'_> {
         let sub_query = &query[index_counter..];
         if let Some(index) = sub_query.find(' ') {
             let destination = sub_query[0..index].to_string().to_lowercase();
-            self.parameters.insert("destination", destination);
+            source.query.parameters.insert("destination", destination);
             index_counter = index + 1;
         } else {
             panic!("Boom!");
         }
         let attributes = &sub_query[index_counter..];
-        self.parameters.insert("attributes", attributes.to_string());
+        source.query.parameters.insert("attributes", attributes.to_string());
+        self.execute(source);
     }
 
-    pub fn execute(&self) {
-        let command = self.parameters.get("command").unwrap().as_str();
-        let destination = self.parameters.get("destination").unwrap().as_str();
-        let attributes = self.parameters.get("attributes").unwrap().as_str();
-        match destination {
-            "area" => Area::new(command, attributes).execute(),
+    pub fn execute(&self, source: Source) {
+        let destination = source.query.parameters.get("destination").unwrap();
+        match destination.as_str() {
+            "area" => Area::new(source).execute(),
             "record" => Record::new().execute(),
             _ => (),
         };

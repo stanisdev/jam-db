@@ -1,37 +1,33 @@
 use std::collections::HashMap;
 use regex::Regex;
 use super::parameter_type::ParameterType;
+use super::source::Source;
 
 pub struct Area<'a> {
-    command: &'a str,
-    attributes: &'a str,
+    source: Source<'a>,
 }
 
 impl Area<'_> {
-    const OPTIONS: [&'static str; 3] = ["restriction", "fields", "index"];
-
-    pub fn new<'a>(command: &'a str, attributes: &'a str) -> Area<'a> {
-        Area {
-            command,
-            attributes,
-        }
+    pub fn new(source: Source) -> Area {
+        Area { source }
     }
 
     pub fn execute(&self) {
-        let mut sub_string = self.attributes;
+        let attributes_str = self.source.query.parameters.get("attributes").unwrap().as_str();
+        let mut sub_string = attributes_str;
         let area_name: &str;
 
         // Get area name
         if let Some(index) = sub_string.find(' ') {
-            area_name = &self.attributes[0..index];
-            sub_string = &self.attributes[index + 1..];
+            area_name = &attributes_str[0..index];
+            sub_string = &attributes_str[index + 1..];
         } else {
             panic!("Boom");
         }
         let sub_string_lowercase = sub_string.to_lowercase();
         let mut option_indexes: HashMap<usize, &str> = HashMap::new(); // @todo: change this
 
-        for option in Area::OPTIONS.iter() {
+        for option in self.source.config.area.options.iter() {
             if let Some(index) = sub_string_lowercase.find(option) {
                 option_indexes.insert(index, option);
             }
