@@ -15,4 +15,5 @@ fn main() {
             description=(type=unique)";
     let mut qp = QueryParser::new();
     qp.parse(query);
+    qp.execute();
 }

@@ -6,12 +6,19 @@ use std::io::prelude::*;
 pub struct Config<'a> {
     #[serde(borrow)]
     pub area: Area<'a>,
+    pub types: Types<'a>,
 }
 
 #[derive(Deserialize)]
 pub struct Area<'a> {
     #[serde(borrow)]
     pub options: [&'a str; 3],
+}
+
+#[derive(Deserialize)]
+pub struct Types<'a> {
+    #[serde(borrow)]
+    pub available: [&'a str; 3],
 }
 
 impl<'a> Config<'a> {

@@ -1,2 +1,5 @@
 [area]
 options = ["restriction", "fields", "index"]
+
+[types]
+available = ["int", "bool", "string"]

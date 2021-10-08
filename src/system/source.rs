@@ -1,13 +1,7 @@
-use std::collections::HashMap;
 use super::config::Config;
 
 pub struct Source<'a> {
     pub config: Config<'a>,
-    pub query: Query<'a>,
-}
-
-pub struct Query<'a> {
-    pub parameters: HashMap<&'a str, String>,
 }
 
 impl Source <'_>{
@@ -15,9 +9,6 @@ impl Source <'_>{
         let config = Config::get(config_contents);
         Source {
             config,
-            query: Query {
-                parameters: HashMap::new(),
-            },
         }
     }
 }

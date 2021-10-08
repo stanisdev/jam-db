@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
 pub struct LengthValidator<'a> {
-    type_name: &'a str,
+    data_type: &'a str,
     parameters: HashMap<&'a str, &'a str>,
     min: Option<u32>,
     max: Option<u32>,
 }
 
 impl<'a> LengthValidator<'_> {
-    pub fn new(type_name: &'a str, parameters: HashMap<&'a str, &'a str>) -> LengthValidator<'a> {
+    pub fn new(data_type: &'a str, parameters: HashMap<&'a str, &'a str>) -> LengthValidator<'a> {
         LengthValidator {
-            type_name,
+            data_type,
             parameters,
             min: None,
             max: None,

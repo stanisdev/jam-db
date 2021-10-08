@@ -1,6 +1,6 @@
 use super::area::Area;
 use super::record::Record;
-use super::source::Source;
+use super::container::get_container;
 
 pub struct QueryParser {}
 
@@ -8,10 +8,10 @@ impl QueryParser {
     pub fn new() -> Self {
         QueryParser {}
     }
-
+    
+    /// Initial parsing a string representing a query
     pub fn parse(&mut self, initial_query: &str) {
-        let mut config_contents = String::new();
-        let mut source = Source::new(&mut config_contents);
+        let container = get_container();
 
         // Cut excess whitespace symbols
         let mut query = String::new();
@@ -25,7 +25,7 @@ impl QueryParser {
         // Get command
         if let Some(index) = query.find(' ') {
             let command = &query[0..index].to_lowercase();
-            source.query.parameters.insert("command", command.to_string());
+            container.insert("query:command", Box::leak(command.to_string().into_boxed_str())); //@todo: change this
             index_counter = index + 1;
         } else {
             panic!("Boom!");
@@ -34,20 +34,24 @@ impl QueryParser {
         let sub_query = &query[index_counter..];
         if let Some(index) = sub_query.find(' ') {
             let destination = sub_query[0..index].to_string().to_lowercase();
-            source.query.parameters.insert("destination", destination);
+            container.insert("query:destination", Box::leak(destination.into_boxed_str()));
             index_counter = index + 1;
         } else {
             panic!("Boom!");
         }
         let attributes = &sub_query[index_counter..];
-        source.query.parameters.insert("attributes", attributes.to_string());
-        self.execute(source);
+        container.insert("query:attributes", Box::leak(attributes.to_string().into_boxed_str()));
     }
 
-    pub fn execute(&self, source: Source) {
-        let destination = source.query.parameters.get("destination").unwrap();
-        match destination.as_str() {
-            "area" => Area::new(source).execute(),
+    /// Continue executing the query based on
+    /// the collected initial data
+    pub fn execute(&self) {
+        let destination: &str = get_container().get("query:destination").unwrap();
+        match destination {
+            "area" => {
+                let mut area = Area::new();
+                area.execute();
+            },
             "record" => Record::new().execute(),
             _ => (),
         };

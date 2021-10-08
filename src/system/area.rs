@@ -1,19 +1,23 @@
 use std::collections::HashMap;
 use regex::Regex;
 use super::parameter_type::ParameterType;
-use super::source::Source;
+use super::container::get_container;
+use super::container::get_source;
 
 pub struct Area<'a> {
-    source: Source<'a>,
+    attributes: Vec<AreaAttribute<'a>>,
 }
 
-impl Area<'_> {
-    pub fn new(source: Source) -> Area {
-        Area { source }
+impl<'a> Area<'a> {
+    pub fn new() -> Area<'a> {
+        Area {
+            attributes: vec![],
+        }
     }
 
-    pub fn execute(&self) {
-        let attributes_str = self.source.query.parameters.get("attributes").unwrap().as_str();
+    /// Execute the query being intended to an area
+    pub fn execute(&mut self) {
+        let attributes_str: &str = get_container().get("query:attributes").unwrap();
         let mut sub_string = attributes_str;
         let area_name: &str;
 
@@ -27,7 +31,7 @@ impl Area<'_> {
         let sub_string_lowercase = sub_string.to_lowercase();
         let mut option_indexes: HashMap<usize, &str> = HashMap::new(); // @todo: change this
 
-        for option in self.source.config.area.options.iter() {
+        for option in get_source().config.area.options.iter() {
             if let Some(index) = sub_string_lowercase.find(option) {
                 option_indexes.insert(index, option);
             }
@@ -39,7 +43,6 @@ impl Area<'_> {
         indexes.sort();
         
         let mut counter = 0;
-        let mut attributes: Vec<AreaAttribute> = Vec::new();
 
         while counter < indexes.len() {
             let index = indexes[counter];
@@ -52,17 +55,18 @@ impl Area<'_> {
             } else {
                 from..sub_string.len()
             };
-            attributes.push(AreaAttribute{
+            self.attributes.push(AreaAttribute {
                 option,
                 components: &sub_string[range].trim(),
             });
             counter += 1;
         }
-        self.parse_attributes(attributes);
+        self.parse_attributes();
     }
 
-    fn parse_attributes(&self, attributes: Vec<AreaAttribute>) {
-        for element in attributes {
+    /// Parse attributes of the query
+    fn parse_attributes(&self) {
+        for element in &self.attributes {
             match element.option {
                 "fields" => {
                     let mut components = element.components;
@@ -109,14 +113,16 @@ impl Area<'_> {
                             break;
                         }
                     };
-                    Self::compose_fields(fields);
+                    self.compose_fields(fields);
                 },
                 _ => (),
             }
         }
     }
 
-    fn compose_fields(fields: Vec<AreaField>) {
+    /// Analyse section 'fields' by making up appropriate
+    /// HashMap of fields and their parameters
+    fn compose_fields(&self, fields: Vec<AreaField>) {
         for element in fields {
             let mut parameters = element.parameters;
             let mut parsed_parameters: HashMap<&str, &str> = HashMap::new();
@@ -149,10 +155,11 @@ impl Area<'_> {
             if !parsed_parameters.contains_key("type") {
                 panic!("Boom");
             }
-            let field_type = parsed_parameters.get("type").unwrap().to_lowercase();
+            let field_data_type = Box::leak(parsed_parameters.get("type").unwrap().to_lowercase().into_boxed_str());
+            get_container().insert("field:data_type", field_data_type);
             parsed_parameters.remove("type");
 
-            let parameter_type = ParameterType::new(field_type.as_str());
+            let parameter_type = ParameterType::new();
             if !parameter_type.is_correct() {
                 panic!("Boom");
             }

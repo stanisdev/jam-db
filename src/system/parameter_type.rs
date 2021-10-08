@@ -1,19 +1,21 @@
 use std::collections::HashMap;
 use super::validators::LengthValidator;
+use super::container::get_container;
+use super::container::get_source;
 
 pub struct ParameterType<'a> {
-    name: &'a str,
+    data_type: &'a str,
 }
 
-impl ParameterType<'_> {
-    const AVAILABLE_TYPES: [&'static str; 3] = ["int", "bool", "string"];
-
-    pub fn new(name: &str) -> ParameterType {
-        ParameterType { name }
+impl<'a> ParameterType<'a> {
+    pub fn new() -> ParameterType<'a> {
+        ParameterType {
+            data_type: get_container().get("field:data_type").unwrap(),
+        }
     }
 
     pub fn is_correct(&self) -> bool {
-        Self::AVAILABLE_TYPES.contains(&self.name)
+        get_source().config.types.available.contains(&self.data_type)
     }
 
     pub fn auto_increment(&self, value: &str) {
@@ -38,7 +40,7 @@ impl ParameterType<'_> {
                 .collect::<Vec<&str>>();
             parsed_value.insert(elements[0], elements[1]);
         }
-        let mut validator = LengthValidator::new(self.name, parsed_value);
+        let mut validator = LengthValidator::new(self.data_type, parsed_value);
         match validator.verify() {
             Err(message) => println!("{}", message),
             Ok(_) => (),
@@ -46,6 +48,6 @@ impl ParameterType<'_> {
     }
 
     pub fn interval(&self, value: &str) {
-        
+
     }
 }
