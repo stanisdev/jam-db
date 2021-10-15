@@ -1,5 +1,6 @@
 mod system;
 use system::query_parser::QueryParser;
+use system::types::{Section};
 
 fn main() {
     let query = "CREATE AREA countries
@@ -13,7 +14,9 @@ fn main() {
         INDEX
             population=(type=plain)
             description=(type=unique)";
-    let mut qp = QueryParser::new();
-    qp.parse(query);
-    qp.execute();
+    let mut qp = QueryParser::new(query);
+    match qp.execute() {
+        Ok(_) => (),
+        Err(message) => println!("{}", message),
+    }
 }

@@ -1,21 +1,22 @@
-use super::area::Area;
+use super::area::{Area};
 use super::record::Record;
 use super::container::get_container;
+use super::types::{Section, Message};
 
-pub struct QueryParser {}
+pub struct QueryParser<'a> {
+    query: &'a str,
+}
 
-impl QueryParser {
-    pub fn new() -> Self {
-        QueryParser {}
-    }
-    
-    /// Initial parsing a string representing a query
-    pub fn parse(&mut self, initial_query: &str) {
+impl Section for QueryParser<'_> {
+    /**
+     * Initial parsing a string representing a query
+     */
+    fn execute(&mut self) -> Result<(), String> {
         let container = get_container();
 
         // Cut excess whitespace symbols
         let mut query = String::new();
-        for token in initial_query.split_whitespace().into_iter() {
+        for token in self.query.split_whitespace().into_iter() {
             query.push_str(token);
             query.push(' ');
         }
@@ -25,35 +26,42 @@ impl QueryParser {
         // Get command
         if let Some(index) = query.find(' ') {
             let command = &query[0..index].to_lowercase();
-            container.insert("query:command", Box::leak(command.to_string().into_boxed_str())); //@todo: change this
+            container.set("query:command", command.to_string());
             index_counter = index + 1;
         } else {
-            panic!("Boom!");
+            return self.build_error("The query is incorrect");
         }
         // Get destination
         let sub_query = &query[index_counter..];
         if let Some(index) = sub_query.find(' ') {
             let destination = sub_query[0..index].to_string().to_lowercase();
-            container.insert("query:destination", Box::leak(destination.into_boxed_str()));
+            container.set("query:destination", destination);
             index_counter = index + 1;
         } else {
-            panic!("Boom!");
+            return self.build_error("Destination of the query cannot be recognized");
         }
         let attributes = &sub_query[index_counter..];
-        container.insert("query:attributes", Box::leak(attributes.to_string().into_boxed_str()));
+        container.set("query:attributes", attributes.to_string());
+        self.run_destination()
+    }
+}
+
+impl<'a> QueryParser<'a> {
+    pub fn new(query: &'a str) -> Self {
+        QueryParser {
+            query,
+        }
     }
 
-    /// Continue executing the query based on
-    /// the collected initial data
-    pub fn execute(&self) {
-        let destination: &str = get_container().get("query:destination").unwrap();
-        match destination {
-            "area" => {
-                let mut area = Area::new();
-                area.execute();
-            },
+    /**
+     * Continue executing the query based on
+     * the collected initial data
+     */
+    fn run_destination(&self) -> Result<(), String> {
+        match get_container().get("query:destination") {
+            "area" => Area::new().execute(),
             "record" => Record::new().execute(),
-            _ => (),
-        };
+            _ => self.build_error("The destination specified incorrectly"),
+        }
     }
 }
