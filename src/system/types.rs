@@ -19,3 +19,20 @@ pub struct AreaAttribute<'a> {
     pub option: &'a str,
     pub components: &'a str,
 }
+
+custom_derive! {
+    #[derive(Debug, EnumFromStr)]
+    pub enum Destination {
+        Area,
+        Record,
+    }
+}
+
+custom_derive! {
+    #[derive(Debug, EnumFromStr)]
+    pub enum Option {
+        Fields,
+        Restriction,
+        Index,
+    }
+}

@@ -1,7 +1,9 @@
+use enum_derive::ParseEnumError;
 use super::area::{Area};
 use super::record::Record;
 use super::container::get_container;
-use super::types::{Section, Message};
+use super::types::{Section, Message, Destination};
+use super::utils::Utils;
 
 pub struct QueryParser<'a> {
     query: &'a str,
@@ -35,7 +37,7 @@ impl Section for QueryParser<'_> {
         let sub_query = &query[index_counter..];
         if let Some(index) = sub_query.find(' ') {
             let destination = sub_query[0..index].to_string().to_lowercase();
-            container.set("query:destination", destination);
+            container.set("query:destination", Utils::capitalize_first_letter(destination.as_str()));
             index_counter = index + 1;
         } else {
             return self.build_error("Destination of the query cannot be recognized");
@@ -58,10 +60,15 @@ impl<'a> QueryParser<'a> {
      * the collected initial data
      */
     fn run_destination(&self) -> Result<(), String> {
-        match get_container().get("query:destination") {
-            "area" => Area::new().execute(),
-            "record" => Record::new().execute(),
-            _ => self.build_error("The destination specified incorrectly"),
+        let result: Result<Destination, ParseEnumError> = get_container()
+            .get("query:destination")
+            .parse();
+        match result {
+            Ok(destination) => match destination {
+                Destination::Area => Area::new().execute(),
+                Destination::Record => Record::new().execute(),
+            },
+            Err(_) => self.build_error("The destination specified incorrectly")
         }
     }
 }

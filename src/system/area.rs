@@ -1,8 +1,15 @@
+use enum_derive::ParseEnumError;
 use std::collections::HashMap;
 use super::container::get_container;
 use super::container::get_source;
-use super::types::{Message, Section, AreaAttribute};
 use super::field::Field;
+use super::utils::Utils;
+use super::types::{
+    Message,
+    Section,
+    AreaAttribute,
+    Option,
+};
 
 pub struct Area<'a> {
     attributes: Vec<AreaAttribute<'a>>,
@@ -73,13 +80,17 @@ impl<'a> Area<'a> {
      */
     fn parse_attributes(&self) -> Result<(), String> {
         for element in &self.attributes {
-            let result = match element.option {
-                "fields" => Field::new(element.components).execute(),
-                "restriction" => Ok(()),
-                "index" => Ok(()),
-                _ => Err("The option '{}' is unknown".to_string()),
+            let option = Utils::capitalize_first_letter(element.option).parse();
+            let result: Result<Option, ParseEnumError> = option;
+            let execution_result = match result {
+                Ok(option) => match option {
+                    Option::Fields => Field::new(element.components).execute(),
+                    Option::Restriction => Ok(()),
+                    Option::Index => Ok(()),
+                },
+                Err(_) => self.build_error("The option '{}' is unknown"),
             };
-            if let Err(message) = result {
+            if let Err(message) = execution_result {
                 return Err(message);
             }
         }

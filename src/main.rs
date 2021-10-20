@@ -1,3 +1,5 @@
+#[macro_use] extern crate custom_derive;
+#[macro_use] extern crate enum_derive;
 mod system;
 use system::query_parser::QueryParser;
 use system::types::{Section};
