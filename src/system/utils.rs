@@ -9,4 +9,12 @@ impl Utils {
         chars[0] = chars[0].to_uppercase().nth(0).unwrap();
         chars.into_iter().collect::<String>()
     }
+
+    pub fn snake_case_to_camel_case(value: &str) -> String {
+        value
+            .split('_')
+            .into_iter()
+            .map(|elem| Self::capitalize_first_letter(elem))
+            .collect::<String>()
+    }
 }

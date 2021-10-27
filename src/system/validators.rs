@@ -1,14 +1,15 @@
 use std::collections::HashMap;
+use super::types::Dictionary;
 
 pub struct LengthValidator<'a> {
     data_type: &'a str,
-    parameters: HashMap<&'a str, &'a str>,
+    parameters: Dictionary<'a>,
     min: Option<u32>,
     max: Option<u32>,
 }
 
 impl<'a> LengthValidator<'_> {
-    pub fn new(data_type: &'a str, parameters: HashMap<&'a str, &'a str>) -> LengthValidator<'a> {
+    pub fn new(data_type: &'a str, parameters: Dictionary<'a>) -> LengthValidator<'a> {
         LengthValidator {
             data_type,
             parameters,

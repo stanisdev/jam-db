@@ -8,25 +8,26 @@ use super::types::{
     Message,
     Section,
     AreaAttribute,
-    Option,
+    SystemOption,
+    Dictionary,
 };
 
-pub struct Area<'a> {
+pub struct AreaParser<'a> {
     attributes: Vec<AreaAttribute<'a>>,
 }
 
-impl Section for Area<'_> {
+impl Section for AreaParser<'_> {
     /**
      * Execute the query being intended to an area
      */
     fn execute(&mut self) -> Result<(), String> {
         let attributes_str = get_container().get("query:attributes");
         let mut sub_string = attributes_str;
-        let area_name: &str;
+        let mut area_instance = AreaInstance::new();
 
         // Get area name
         if let Some(index) = sub_string.find(' ') {
-            area_name = &attributes_str[0..index];
+            area_instance.name = Some(&attributes_str[0..index]);
             sub_string = &attributes_str[index + 1..];
         } else {
             return self.build_error("Name of an area cannot be recognized");
@@ -68,9 +69,9 @@ impl Section for Area<'_> {
     }
 }
 
-impl<'a> Area<'a> {
-    pub fn new() -> Area<'a> {
-        Area {
+impl<'a> AreaParser<'a> {
+    pub fn new() -> AreaParser<'a> {
+        AreaParser {
             attributes: vec![],
         }
     }
@@ -81,12 +82,12 @@ impl<'a> Area<'a> {
     fn parse_attributes(&self) -> Result<(), String> {
         for element in &self.attributes {
             let option = Utils::capitalize_first_letter(element.option).parse();
-            let result: Result<Option, ParseEnumError> = option;
+            let result: Result<SystemOption, ParseEnumError> = option;
             let execution_result = match result {
                 Ok(option) => match option {
-                    Option::Fields => Field::new(element.components).execute(),
-                    Option::Restriction => Ok(()),
-                    Option::Index => Ok(()),
+                    SystemOption::Fields => Field::new(element.components).execute(),
+                    SystemOption::Restriction => Ok(()),
+                    SystemOption::Index => Ok(()),
                 },
                 Err(_) => self.build_error("The option '{}' is unknown"),
             };
@@ -95,5 +96,62 @@ impl<'a> Area<'a> {
             }
         }
         Ok(())
+    }
+}
+
+pub struct AreaInstance<'a> {
+    name: Option<&'a str>,
+    options: Vec<AreaOption<'a>>,
+}
+
+impl<'a> AreaInstance<'a> {
+    pub fn new() -> AreaInstance<'a> {
+        AreaInstance {
+            name: None,
+            options: vec![],
+        }
+    }
+}
+
+pub struct AreaOption<'a> {
+    pub kind: std::option::Option<SystemOption>,
+    pub elements: Vec<AreaOptionElement<'a>>,
+}
+
+impl<'a> AreaOption<'a> {
+    pub fn new() -> AreaOption<'a> {
+        AreaOption {
+            kind: None,
+            elements: vec![],
+        }
+    }
+}
+
+pub struct AreaOptionElement<'a> {
+    pub name: Option<&'a str>,
+    pub parameters: Vec<Parameter<'a>>,
+}
+
+impl<'a> AreaOptionElement<'a> {
+    pub fn new() -> AreaOptionElement<'a> {
+        AreaOptionElement {
+            name: None,
+            parameters: vec![],
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Parameter<'a> {
+    pub conjugate: Option<Dictionary<'a>>,
+    pub nested: Option<HashMap<&'a str, Dictionary<'a>>>,
+}
+
+impl<'a> Parameter<'a> {
+    pub fn new() -> Parameter<'a> {
+        Parameter {
+            conjugate: None,
+            nested: None,
+        }
     }
 }

@@ -3,9 +3,16 @@ use regex::Regex;
 use super::container::get_container;
 use super::data_type::DataType;
 use super::types::{Message, Section, AreaField};
+use super::types::SystemOption;
+use super::area::{
+    AreaOption,
+    AreaOptionElement,
+    Parameter,
+};
 
 pub struct Field<'a> {
-    components: &'a str
+    components: &'a str,
+    all: Vec<Parameter<'a>>,
 }
 
 impl Section for Field<'_> {
@@ -14,10 +21,11 @@ impl Section for Field<'_> {
     }
 }
 
-impl Field<'_> {
+impl<'a> Field<'a> {
     pub fn new(components: &str) -> Field {
         Field {
-            components
+            components,
+            all: vec![],
         }
     }
 
@@ -27,6 +35,8 @@ impl Field<'_> {
     fn recognize_fields(&mut self) -> Result<(), String> {
         let mut components = self.components;
         let mut fields: Vec<AreaField> = Vec::new();
+        let mut area_option = AreaOption::new();
+        area_option.kind = Some(SystemOption::Fields);
 
         loop {
             if let Some(index) = components.find('=') {
@@ -76,8 +86,12 @@ impl Field<'_> {
      * Analyse section 'fields' by making up appropriate
      * HashMap of the fields and their parameters
      */
-    fn compose_fields(&self, fields: Vec<AreaField>) -> Result<(), String> {
+    fn compose_fields(&mut self, fields: Vec<AreaField<'a>>) -> Result<(), String> {
+        let mut all: Vec<AreaOptionElement> = vec![];
         for field in fields {
+            let mut field_instance = AreaOptionElement::new();
+            field_instance.name = Some(field.name);
+
             let mut parameters = field.parameters;
             let mut field_parameters: HashMap<&str, &str> = HashMap::new();
 
@@ -109,13 +123,22 @@ impl Field<'_> {
             if !field_parameters.contains_key("type") {
                 return self.build_error("Specify a type for the field '{}'"); // element.name
             }
-            let field_data_type = field_parameters.get("type").unwrap().to_lowercase().to_string();
+            let field_data_type = field_parameters
+                .get("type")
+                .unwrap()
+                .to_lowercase()
+                .to_string();
+
             get_container().set("field:data_type", field_data_type);
             field_parameters.remove("type");
 
-            if let Err(message) = DataType::new(field_parameters).execute() {
-                return Err(message);
-            }
+            let s = match DataType::new(field_parameters).execute() {
+                Ok(parameters) => parameters,
+                Err(message) => return Err(message),
+            };
+            self.all = s;
+            // field_instance.parameters = s;
+            all.push(field_instance);
         }
         Ok(())
     }

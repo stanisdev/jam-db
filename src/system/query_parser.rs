@@ -1,5 +1,5 @@
 use enum_derive::ParseEnumError;
-use super::area::{Area};
+use super::area::{AreaParser};
 use super::record::Record;
 use super::container::get_container;
 use super::types::{Section, Message, Destination};
@@ -65,10 +65,10 @@ impl<'a> QueryParser<'a> {
             .parse();
         match result {
             Ok(destination) => match destination {
-                Destination::Area => Area::new().execute(),
+                Destination::Area => AreaParser::new().execute(),
                 Destination::Record => Record::new().execute(),
             },
-            Err(_) => self.build_error("The destination specified incorrectly")
+            Err(_) => self.build_error("The destination specified incorrectly"),
         }
     }
 }

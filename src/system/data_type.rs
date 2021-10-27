@@ -1,59 +1,89 @@
+use enum_derive::ParseEnumError;
 use std::collections::HashMap;
-use super::validators::LengthValidator;
 use super::container::get_container;
 use super::container::get_source;
-use super::types::{Message, Section};
+use super::utils::Utils;
+use super::area::Parameter;
+use super::types::{
+    Dictionary,
+    FieldParameter,
+};
 
 pub struct DataType<'a> {
     data_type: &'a str,
-    field_parameters: HashMap<&'a str, &'a str>,
+    field_parameters: Dictionary<'a>,
 }
 
-impl Section for DataType<'_> {
-    fn execute(&mut self) -> Result<(), String> {
+impl DataType<'_> {
+    pub fn execute(&mut self) -> Result<Vec<Parameter>, String> {
         if !self.is_correct() {
-            return self.build_error(
-                "The data type '{}' does not exist or is not put into operation yet"
-            );
+            return Err("The data type '{}' does not exist or is not put into operation yet"
+                .to_string());
         }
+        let mut result: Vec<Parameter> = vec![];
         for (name, value) in &self.field_parameters {
-            let result = match *name {
-                "auto_increment" => self.auto_increment(value),
-                "default" => self.default(value),
-                "length" => self.length(value),
-                "interval" => self.interval(value),
-                _ => self.build_error("The parameter '{}' is incorrect"),
+            let parameter_name: Result<FieldParameter, ParseEnumError> = Utils
+                ::snake_case_to_camel_case(name)
+                .parse();
+
+            let parameter_instance = match parameter_name {
+                Ok(field_parameter) => {
+                    let result = match field_parameter {
+                        FieldParameter::AutoIncrement => self.auto_increment(value),
+                        FieldParameter::Default => self.default(value),
+                        FieldParameter::Length => self.length(value),
+                        FieldParameter::Interval => self.interval(value),
+                    };
+                    result
+                },
+                Err(_) => Err("The parameter '{}' is incorrect".to_string()),
             };
-            if let Err(message) = result {
+            if let Err(message) = parameter_instance {
                 return Err(message);
             }
+            result.push(parameter_instance.unwrap());
         }
-        Ok(())
+        Ok(result)
     }
 }
 
 impl<'a> DataType<'a> {
-    pub fn new(field_parameters: HashMap<&'a str, &'a str>) -> DataType<'a> {
+    pub fn new(field_parameters: Dictionary<'a>) -> DataType<'a> {
         DataType {
             data_type: get_container().get("field:data_type"),
             field_parameters,
         }
     }
 
-    pub fn is_correct(&self) -> bool {
-        get_source().config.types.available.contains(&self.data_type)
+    /**
+     * The "auto_increment" parameter
+     */
+    pub fn auto_increment(&self, value: &'a str) -> Result<Parameter<'a>, String> {
+        let mut parameter = Parameter::new();
+        let mut payload: Dictionary = HashMap::new();
+        payload.insert("auto_increment", value);
+        parameter.conjugate = Some(payload);
+
+        Ok(parameter)
     }
 
-    pub fn auto_increment(&self, value: &str) -> Result<(), String> {
-        Ok(())
+    /**
+     * The "default" parameter
+     */
+    pub fn default(&self, value: &'a str) -> Result<Parameter<'a>, String> {
+        let mut parameter = Parameter::new();
+        let mut payload: Dictionary = HashMap::new();
+        payload.insert("default", value);
+        parameter.conjugate = Some(payload);
+
+        Ok(parameter)
     }
 
-    pub fn default(&self, value: &str) -> Result<(), String> {
-        Ok(())
-    }
-
-    pub fn length(&self, value: &str) -> Result<(), String> {
-        let mut parsed_value: HashMap<&str, &str> = HashMap::new();
+    /**
+     * Length parameter
+     */
+    pub fn length(&self, value: &'a str) -> Result<Parameter<'a>, String> {
+        let mut parsed_value: Dictionary = HashMap::new();
 
         if value.contains(' ') {
             for token in value.split_whitespace().into_iter() {
@@ -66,11 +96,26 @@ impl<'a> DataType<'a> {
                 .collect::<Vec<&str>>();
             parsed_value.insert(elements[0], elements[1]);
         }
-        let mut validator = LengthValidator::new(self.data_type, parsed_value);
-        Ok(())
+        let mut parameter = Parameter::new();
+        let mut payload = HashMap::new();
+        payload.insert("length", parsed_value);
+        parameter.nested = Some(payload);
+
+        // let mut validator = LengthValidator::new(self.data_type, parsed_value);
+        Ok(parameter)
     }
 
-    pub fn interval(&self, value: &str) -> Result<(), String> {
-        Ok(())
+    /**
+     * Interval
+     */
+    pub fn interval(&self, value: &str) -> Result<Parameter<'a>, String> {
+        Ok(Parameter::new()) // @todo: complete this
+    }
+
+    /**
+     * Is a data type is correct
+     */
+    pub fn is_correct(&self) -> bool {
+        get_source().config.types.available.contains(&self.data_type)
     }
 }
