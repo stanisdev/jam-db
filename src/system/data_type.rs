@@ -14,8 +14,8 @@ pub struct DataType<'a> {
     field_parameters: Dictionary<'a>,
 }
 
-impl DataType<'_> {
-    pub fn execute(&mut self) -> Result<Vec<Parameter>, String> {
+impl<'a> DataType<'a> {
+    pub fn execute(&mut self) -> Result<Vec<Parameter<'a>>, String> {
         if !self.is_correct() {
             return Err("The data type '{}' does not exist or is not put into operation yet"
                 .to_string());

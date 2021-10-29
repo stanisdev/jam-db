@@ -14,6 +14,8 @@ use super::types::{
 
 pub struct AreaParser<'a> {
     attributes: Vec<AreaAttribute<'a>>,
+    pub instance: AreaInstance<'a>,
+    pub options: Vec<AreaOption<'a>>,
 }
 
 impl Section for AreaParser<'_> {
@@ -23,11 +25,10 @@ impl Section for AreaParser<'_> {
     fn execute(&mut self) -> Result<(), String> {
         let attributes_str = get_container().get("query:attributes");
         let mut sub_string = attributes_str;
-        let mut area_instance = AreaInstance::new();
 
         // Get area name
         if let Some(index) = sub_string.find(' ') {
-            area_instance.name = Some(&attributes_str[0..index]);
+            self.instance.name = Some(&attributes_str[0..index]);
             sub_string = &attributes_str[index + 1..];
         } else {
             return self.build_error("Name of an area cannot be recognized");
@@ -73,19 +74,30 @@ impl<'a> AreaParser<'a> {
     pub fn new() -> AreaParser<'a> {
         AreaParser {
             attributes: vec![],
+            instance: AreaInstance::new(),
+            options: vec![],
         }
     }
 
     /**
      * Parse attributes of the query
      */
-    fn parse_attributes(&self) -> Result<(), String> {
+    fn parse_attributes(&mut self) -> Result<(), String> {
         for element in &self.attributes {
             let option = Utils::capitalize_first_letter(element.option).parse();
             let result: Result<SystemOption, ParseEnumError> = option;
             let execution_result = match result {
                 Ok(option) => match option {
-                    SystemOption::Fields => Field::new(element.components).execute(),
+                    SystemOption::Fields => {
+
+                        let mut field = Field::new(element.components);
+                        if let Err(message) = field.execute() {
+                            return Err(message);
+                        }
+                        let area_option = AreaOption::new(SystemOption::Fields, field.instances);
+                        self.options.push(area_option);
+                        Ok(())
+                    },
                     SystemOption::Restriction => Ok(()),
                     SystemOption::Index => Ok(()),
                 },
@@ -99,9 +111,12 @@ impl<'a> AreaParser<'a> {
     }
 }
 
+/**
+ *  AreaInstance
+ */
 pub struct AreaInstance<'a> {
     name: Option<&'a str>,
-    options: Vec<AreaOption<'a>>,
+    pub options: Vec<AreaOption<'a>>,
 }
 
 impl<'a> AreaInstance<'a> {
@@ -111,40 +126,56 @@ impl<'a> AreaInstance<'a> {
             options: vec![],
         }
     }
+
+    /**
+     * Save a new area
+     */
+    pub fn save(&self) {}
 }
 
-pub struct AreaOption<'a> {
-    pub kind: std::option::Option<SystemOption>,
-    pub elements: Vec<AreaOptionElement<'a>>,
+/**
+ * AreaOption
+ */
+#[derive(Debug)]
+pub struct AreaOption<'a> { // fields, restriction, index
+    kind: SystemOption,
+    elements: Vec<AreaOptionElement<'a>>,
 }
 
 impl<'a> AreaOption<'a> {
-    pub fn new() -> AreaOption<'a> {
+    pub fn new(kind: SystemOption, elements: Vec<AreaOptionElement<'a>>) -> AreaOption<'a> {
         AreaOption {
-            kind: None,
-            elements: vec![],
+            kind,
+            elements,
         }
     }
 }
 
-pub struct AreaOptionElement<'a> {
-    pub name: Option<&'a str>,
-    pub parameters: Vec<Parameter<'a>>,
+/**
+ * AreaOptionElement
+ */
+#[derive(Debug)]
+pub struct AreaOptionElement<'a> { // id=(type=INT auto_increment=true)
+    name: &'a str,
+    parameters: Vec<Parameter<'a>>,
 }
 
 impl<'a> AreaOptionElement<'a> {
-    pub fn new() -> AreaOptionElement<'a> {
+    pub fn new(name: &'a str, parameters: Vec<Parameter<'a>>) -> AreaOptionElement<'a> {
         AreaOptionElement {
-            name: None,
-            parameters: vec![],
+            name,
+            parameters,
         }
     }
 }
 
+/**
+ * Parameter
+ */
 #[derive(Debug)]
 pub struct Parameter<'a> {
-    pub conjugate: Option<Dictionary<'a>>,
-    pub nested: Option<HashMap<&'a str, Dictionary<'a>>>,
+    pub conjugate: Option<Dictionary<'a>>, // default=false
+    pub nested: Option<HashMap<&'a str, Dictionary<'a>>>, // length=(min=2 max=100)
 }
 
 impl<'a> Parameter<'a> {

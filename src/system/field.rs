@@ -3,16 +3,15 @@ use regex::Regex;
 use super::container::get_container;
 use super::data_type::DataType;
 use super::types::{Message, Section, AreaField};
-use super::types::SystemOption;
+use super::types::{SystemOption, Dictionary};
 use super::area::{
     AreaOption,
     AreaOptionElement,
-    Parameter,
 };
 
 pub struct Field<'a> {
     components: &'a str,
-    all: Vec<Parameter<'a>>,
+    pub instances: Vec<AreaOptionElement<'a>>
 }
 
 impl Section for Field<'_> {
@@ -25,7 +24,7 @@ impl<'a> Field<'a> {
     pub fn new(components: &str) -> Field {
         Field {
             components,
-            all: vec![],
+            instances: vec![],
         }
     }
 
@@ -35,8 +34,6 @@ impl<'a> Field<'a> {
     fn recognize_fields(&mut self) -> Result<(), String> {
         let mut components = self.components;
         let mut fields: Vec<AreaField> = Vec::new();
-        let mut area_option = AreaOption::new();
-        area_option.kind = Some(SystemOption::Fields);
 
         loop {
             if let Some(index) = components.find('=') {
@@ -87,13 +84,9 @@ impl<'a> Field<'a> {
      * HashMap of the fields and their parameters
      */
     fn compose_fields(&mut self, fields: Vec<AreaField<'a>>) -> Result<(), String> {
-        let mut all: Vec<AreaOptionElement> = vec![];
         for field in fields {
-            let mut field_instance = AreaOptionElement::new();
-            field_instance.name = Some(field.name);
-
             let mut parameters = field.parameters;
-            let mut field_parameters: HashMap<&str, &str> = HashMap::new();
+            let mut field_parameters: Dictionary = HashMap::new();
 
             loop {
                 if let Some(index) = parameters.find('=') {
@@ -131,14 +124,14 @@ impl<'a> Field<'a> {
 
             get_container().set("field:data_type", field_data_type);
             field_parameters.remove("type");
-
-            let s = match DataType::new(field_parameters).execute() {
+            
+            let parameters_instances = match DataType::new(field_parameters).execute() {
                 Ok(parameters) => parameters,
                 Err(message) => return Err(message),
             };
-            self.all = s;
-            // field_instance.parameters = s;
-            all.push(field_instance);
+
+            let field_instance = AreaOptionElement::new(field.name, parameters_instances);
+            self.instances.push(field_instance);
         }
         Ok(())
     }
@@ -151,4 +144,3 @@ impl<'a> Field<'a> {
         re.is_match(value)
     }
 }
-

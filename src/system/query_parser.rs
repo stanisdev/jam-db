@@ -65,7 +65,19 @@ impl<'a> QueryParser<'a> {
             .parse();
         match result {
             Ok(destination) => match destination {
-                Destination::Area => AreaParser::new().execute(),
+                Destination::Area => {
+
+                    let mut area_paraser = AreaParser::new();
+                    let result = area_paraser.execute();
+                    if let Err(message) = result {
+                        return Err(message);
+                    }
+                    let mut area_instance = area_paraser.instance;
+                    area_instance.options = area_paraser.options;
+                    area_instance.save();
+
+                    Ok(())
+                },
                 Destination::Record => Record::new().execute(),
             },
             Err(_) => self.build_error("The destination specified incorrectly"),
