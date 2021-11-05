@@ -130,7 +130,84 @@ impl<'a> AreaInstance<'a> {
     /**
      * Save a new area
      */
-    pub fn save(&self) {}
+    pub fn save(&self) {
+        let mut result_string = String::from(self.name.unwrap());
+        result_string.push_str("[");
+
+        // Iterate through options
+        for option in &self.options {
+
+            let option_kind = option.kind.to_string().to_lowercase();
+            result_string.push_str(
+                format!("{}[", option_kind).as_str()
+            );
+
+            // Iterate through the elements of an option
+            for option_element in &option.elements {
+
+                // Iterate parameters of an element
+                let mut conjugate_parameters: Dictionary = HashMap::new();
+                let mut nested_parameters: HashMap<&str, &Dictionary> = HashMap::new();
+
+                for option_element_parameter in &option_element.parameters {
+                    if let Some(value) = &option_element_parameter.conjugate {
+                        conjugate_parameters.extend(value.into_iter());
+                    }
+                    if let Some(value) = &option_element_parameter.nested {
+                        for (key, value) in value {
+                            nested_parameters.insert(key, value);
+                        }
+                    }
+                }
+                
+                // Get the type
+                let the_type = conjugate_parameters.get("type").unwrap();
+                result_string.push_str(
+                    format!("{}:{}[", option_element.name, the_type).as_str()
+                );
+
+                let mut interim_string = String::new();
+                
+                // Add other conjugate parameters
+                let iter = conjugate_parameters
+                    .into_iter()
+                    .filter(|(key, _)| *key != "type");
+                for (key, value) in iter {
+                    interim_string.push_str(
+                        format!("{}:{},", key, value).as_str()
+                    );
+                }                
+                // Add nested parameters
+                for (name, parameters) in nested_parameters {
+                    interim_string.push_str(
+                        format!("{}:[", name).as_str()
+                    );
+                    for (key, value) in parameters {
+                        interim_string.push_str(
+                            format!("{}:{},", key, value).as_str()
+                        );
+                    }
+                    // Remove trailing comma
+                    let interim_string_len = interim_string.len();
+                    if &interim_string[interim_string_len - 1..interim_string_len] == "," {
+                        interim_string = String::from(
+                            &interim_string[0..interim_string_len - 1]
+                        );
+                    }
+                    interim_string.push_str("],");
+                }
+                if interim_string.len() > 0 {
+                    result_string.push_str(
+                        &interim_string[..interim_string.len() - 1]
+                    );
+                }
+                result_string.push_str("]");
+            }
+            result_string.push_str("]");
+        }
+        result_string.push_str("]");
+    }
+
 }
 
 /**

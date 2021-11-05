@@ -1,3 +1,4 @@
+use std::fmt;
 use std::collections::HashMap;
 
 pub trait Message {
@@ -38,6 +39,12 @@ custom_derive! {
         Fields,
         Restriction,
         Index,
+    }
+}
+
+impl fmt::Display for SystemOption {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 

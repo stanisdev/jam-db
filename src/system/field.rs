@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use regex::Regex;
-use super::container::get_container;
 use super::data_type::DataType;
 use super::types::{Message, Section, AreaField};
 use super::types::{SystemOption, Dictionary};
@@ -116,16 +115,16 @@ impl<'a> Field<'a> {
             if !field_parameters.contains_key("type") {
                 return self.build_error("Specify a type for the field '{}'"); // element.name
             }
-            let field_data_type = field_parameters
-                .get("type")
-                .unwrap()
-                .to_lowercase()
-                .to_string();
-
-            get_container().set("field:data_type", field_data_type);
+            let field_data_type = Box::leak(
+                field_parameters
+                    .get("type")
+                    .unwrap()
+                    .to_lowercase()
+                    .into_boxed_str()
+            );
             field_parameters.remove("type");
-            
-            let parameters_instances = match DataType::new(field_parameters).execute() {
+
+            let parameters_instances = match DataType::new(field_parameters, field_data_type).execute() {
                 Ok(parameters) => parameters,
                 Err(message) => return Err(message),
             };

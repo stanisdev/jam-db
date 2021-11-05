@@ -1,6 +1,5 @@
 use enum_derive::ParseEnumError;
 use std::collections::HashMap;
-use super::container::get_container;
 use super::container::get_source;
 use super::utils::Utils;
 use super::area::Parameter;
@@ -43,14 +42,20 @@ impl<'a> DataType<'a> {
             }
             result.push(parameter_instance.unwrap());
         }
+        let mut type_parameter = Parameter::new(); // @todo: optimize this
+        let mut payload: Dictionary = HashMap::new();
+        payload.insert("type", self.data_type);
+        type_parameter.conjugate = Some(payload);
+
+        result.push(type_parameter);
         Ok(result)
     }
 }
 
 impl<'a> DataType<'a> {
-    pub fn new(field_parameters: Dictionary<'a>) -> DataType<'a> {
+    pub fn new(field_parameters: Dictionary<'a>, data_type: &'a str) -> DataType<'a> {
         DataType {
-            data_type: get_container().get("field:data_type"),
+            data_type,
             field_parameters,
         }
     }

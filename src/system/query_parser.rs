@@ -7,6 +7,7 @@ use super::utils::Utils;
 
 pub struct QueryParser<'a> {
     query: &'a str,
+    destination: Option<String>,
 }
 
 impl Section for QueryParser<'_> {
@@ -37,7 +38,7 @@ impl Section for QueryParser<'_> {
         let sub_query = &query[index_counter..];
         if let Some(index) = sub_query.find(' ') {
             let destination = sub_query[0..index].to_string().to_lowercase();
-            container.set("query:destination", Utils::capitalize_first_letter(destination.as_str()));
+            self.destination = Some(Utils::capitalize_first_letter(destination.as_str()));
             index_counter = index + 1;
         } else {
             return self.build_error("Destination of the query cannot be recognized");
@@ -52,6 +53,7 @@ impl<'a> QueryParser<'a> {
     pub fn new(query: &'a str) -> Self {
         QueryParser {
             query,
+            destination: None,
         }
     }
 
@@ -60,8 +62,9 @@ impl<'a> QueryParser<'a> {
      * the collected initial data
      */
     fn run_destination(&self) -> Result<(), String> {
-        let result: Result<Destination, ParseEnumError> = get_container()
-            .get("query:destination")
+        let result: Result<Destination, ParseEnumError> = self.destination
+            .as_ref()
+            .unwrap()
             .parse();
         match result {
             Ok(destination) => match destination {
