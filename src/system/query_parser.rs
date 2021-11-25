@@ -1,89 +1,69 @@
 use enum_derive::ParseEnumError;
-use super::area::{AreaParser};
-use super::record::Record;
-use super::container::get_container;
-use super::types::{Section, Message, Destination};
+use super::area::AreaParser;
+use super::types::{Destination};
 use super::utils::Utils;
+use super::query_metadata::QueryMetadata;
 
 pub struct QueryParser<'a> {
-    query: &'a str,
-    destination: Option<String>,
+    initial_query: &'a str,
+    metadata: QueryMetadata,
 }
 
-impl Section for QueryParser<'_> {
+impl<'a> QueryParser<'a> {
     /**
      * Initial parsing a string representing a query
      */
-    fn execute(&mut self) -> Result<(), String> {
-        let container = get_container();
+    pub fn execute(&mut self) -> Result<(), &str> {
+        let mut query_string = String::new();
 
         // Cut excess whitespace symbols
-        let mut query = String::new();
-        for token in self.query.split_whitespace().into_iter() {
-            query.push_str(token);
-            query.push(' ');
+        for token in self.initial_query.split_whitespace().into_iter() {
+            query_string.push_str(token);
+            query_string.push(' ');
         }
-        let query = &query[0..query.len() - 1];
-        let mut index_counter = 0;
+        let query_string = &query_string[0..query_string.len() - 1];
 
-        // Get command
-        if let Some(index) = query.find(' ') {
-            let command = &query[0..index].to_lowercase();
-            container.set("query:command", command.to_string());
-            index_counter = index + 1;
-        } else {
-            return self.build_error("The query is incorrect");
-        }
-        // Get destination
-        let sub_query = &query[index_counter..];
-        if let Some(index) = sub_query.find(' ') {
-            let destination = sub_query[0..index].to_string().to_lowercase();
-            self.destination = Some(Utils::capitalize_first_letter(destination.as_str()));
-            index_counter = index + 1;
-        } else {
-            return self.build_error("Destination of the query cannot be recognized");
-        }
-        let attributes = &sub_query[index_counter..];
-        container.set("query:attributes", attributes.to_string());
+        // Get a command
+        let space_index = query_string.find(' ').ok_or("The query is incorrect")?;
+        let command = &query_string[0..space_index].to_lowercase();
+        self.metadata.command = Some(command.to_string());
+
+        // Get a destination
+        let query_string = &query_string[space_index + 1..];
+        let space_index = query_string.find(' ').ok_or("Destination of the query cannot be recognized")?;
+        let mut destination = query_string[0..space_index].to_string().to_lowercase();
+        destination = Utils::capitalize_first_letter(destination.as_str());
+        self.metadata.destination = Some(destination);
+        
+        self.metadata.attributes = Some((&query_string[space_index + 1..]).to_string());
         self.run_destination()
     }
 }
 
 impl<'a> QueryParser<'a> {
-    pub fn new(query: &'a str) -> Self {
-        QueryParser {
-            query,
-            destination: None,
-        }
-    }
-
     /**
      * Continue executing the query based on
      * the collected initial data
      */
-    fn run_destination(&self) -> Result<(), String> {
-        let result: Result<Destination, ParseEnumError> = self.destination
+    fn run_destination(&self) -> Result<(), &str> {
+        let result: Result<Destination, ParseEnumError> = self.metadata.destination
             .as_ref()
             .unwrap()
             .parse();
-        match result {
-            Ok(destination) => match destination {
-                Destination::Area => {
-
-                    let mut area_paraser = AreaParser::new();
-                    let result = area_paraser.execute();
-                    if let Err(message) = result {
-                        return Err(message);
-                    }
-                    let mut area_instance = area_paraser.instance;
-                    area_instance.options = area_paraser.options;
-                    area_instance.save();
-
-                    Ok(())
-                },
-                Destination::Record => Record::new().execute(),
+        let destination = result.ok().ok_or("The destination specified incorrectly")?;
+        match destination {
+            Destination::Area => {
+                let area_parser = AreaParser::new(&self.metadata);
+                area_parser.execute()
             },
-            Err(_) => self.build_error("The destination specified incorrectly"),
+            Destination::Record => Ok(()),
+        }
+    }
+
+    pub fn new(initial_query: &'a str) -> Self {
+        QueryParser {
+            initial_query,
+            metadata: QueryMetadata::new(),
         }
     }
 }

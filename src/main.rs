@@ -2,7 +2,6 @@
 #[macro_use] extern crate enum_derive;
 mod system;
 use system::query_parser::QueryParser;
-use system::types::{Section};
 
 fn main() {
     let query = "CREATE AREA countries
@@ -17,8 +16,7 @@ fn main() {
             population=(type=plain)
             description=(type=unique)";
     let mut qp = QueryParser::new(query);
-    match qp.execute() {
-        Ok(_) => (),
-        Err(message) => println!("{}", message),
+    if let Err(message) = qp.execute() {
+        println!("{}", message);
     }
 }

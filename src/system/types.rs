@@ -1,30 +1,6 @@
 use std::fmt;
 use std::collections::HashMap;
 
-pub trait Message {
-    fn build_error(&self, message: &str) -> Result<(), String> {
-        Err(String::from(message))
-    }
-}
-
-pub trait Section {
-    fn execute(&mut self) -> Result<(), String>;
-}
-
-impl<T> Message for T where T: Section {}
-
-pub struct AreaField<'a> {
-    pub name: &'a str,
-    pub parameters: &'a str,
-}
-
-pub struct AreaAttribute<'a> {
-    pub option: &'a str,
-    pub components: &'a str,
-}
-
-pub type Dictionary<'a> = HashMap<&'a str, &'a str>;
-
 custom_derive! {
     #[derive(Debug, EnumFromStr)]
     pub enum Destination {
@@ -50,6 +26,15 @@ impl fmt::Display for SystemOption {
 
 custom_derive! {
     #[derive(Debug, EnumFromStr)]
+    pub enum DataType {
+        Int,
+        String,
+        Bool,
+    }
+}
+
+custom_derive! {
+    #[derive(Debug, EnumFromStr)]
     pub enum FieldParameter {
         AutoIncrement,
         Default,
@@ -57,3 +42,17 @@ custom_derive! {
         Interval,
     }
 }
+
+#[derive(Debug)]
+pub struct AreaOption<'a> {
+    pub name: &'a str,
+    pub components_string: &'a str,
+}
+
+#[derive(Debug)]
+pub struct AreaField<'a> {
+    pub name: &'a str,
+    pub parameters_string: &'a str,
+}
+
+pub type Dictionary<'a> = HashMap<&'a str, &'a str>;
